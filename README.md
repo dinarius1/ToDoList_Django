@@ -30,8 +30,8 @@ create database todolist;
 \q
 ```
 6. Создать .env и прописать следующие пункты ниже. Заполнить пустые параметры.
-(EMAIL_HOST_USER - брала в качества хоста mail.ru,
-EMAIL_HOST_PASSWORD - использовала пароль для внешних приложений)
+- **EMAIL_HOST_USER** - брала в качества хоста mail.ru
+- **EMAIL_HOST_PASSWORD** - использовала пароль для внешних приложений
 ```py
 SECRET_KEY=
 DEBUG=1
