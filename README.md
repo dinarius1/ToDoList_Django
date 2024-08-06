@@ -12,7 +12,7 @@
 ## Необходимые шаги для запуска проекта:
 1. Скопировать репозиторий (SSH ключ):
 ```py
-git clone git@github.com:dinarius1/TodoListBot2.git
+git@github.com:dinarius1/ToDoList_Django.git
 ```
 2. Создать и активировать виртуальное окружение:
 ```py
