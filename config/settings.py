@@ -4,10 +4,6 @@ from decouple import  config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
-
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config("SECRET_KEY")  #config
 
@@ -33,7 +29,7 @@ INSTALLED_APPS = [
 
     #apps
     'user',
-    # 'friend',
+    'friend',
     'task',
 ]
 
@@ -136,10 +132,6 @@ REST_FRAMEWORK = {
 
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
-
-    # 'DEFAULT_PERMISSION_CLASSES': [
-    #     'rest_framework.permissions.IsAuthenticatedOrReadOnly',
-    # ]
 }
 
 #чтобы наш проект был в SWAGGER
@@ -171,8 +163,5 @@ ACTIVATE_USERS_EMAIL = True
 EMAIL_USE_SSL = False
 
 CELERY_BROKER_URL = "redis://localhost:6379"
-#хранилище всех тасков (выполненные/надо выполнить и тп).
-# По факту представляет собой менеджер тасков
-#6379 - имя порта для redis
 CELERY_RESULT_BACKEND = "redis://localhost:6379"
 

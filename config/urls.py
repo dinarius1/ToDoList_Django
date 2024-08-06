@@ -15,6 +15,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('docs/', schema_view.with_ui("swagger")),
     path('api/v1/user/', include('user.urls')),
-    # path('api/v1/friends/', include('friend.urls')),
+    path('api/v1/friends/', include('friend.urls')),
     path('api/v1/task/', include('task.urls')),
 ]

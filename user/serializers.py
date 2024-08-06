@@ -1,5 +1,4 @@
 from rest_framework import serializers
-
 from .models import User
 from .utils import send_activation_code
 
@@ -11,17 +10,14 @@ class RegisterUserSerializer(serializers.ModelSerializer):
         model = User
         fields = ('first_name', 'last_name', 'email', 'password', 'password_confirm')
 
-    def validate(self, attrs):  # attrs - содержит в себе словарь с данными формата json
-        # ATTRS -> OrderedDict([('email', 'admin1@gmail.com'), ('phone', '996700071102'), ('password', '12345'), ('password_confirm', '12345')])
+    def validate(self, attrs):
         pass1 = attrs.get('password')
         pass2 = attrs.pop('password_confirm')
-        # ATTRS AFTER POP -> # ATTRS -> OrderedDict([('email', 'admin1@gmail.com'), ('phone', '996700071102'), ('password', '12345')])
         if pass1 != pass2:
             raise serializers.ValidationError("Пароли не совпадают!")
         return attrs
 
     def validate_email(self, email):
-        # EMAIL  {'email': 'admin3@gmail.com'}
         if User.objects.filter(email=email).exists():
             raise serializers.ValidationError('Пользователь с такой почтой уже существует! Перейдите, пожалуйста, во вкладку авторизации или нажмите на кнопку "Забыл пароль"!')
         return email
@@ -35,14 +31,8 @@ class RegisterUserSerializer(serializers.ModelSerializer):
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('email', )
-
-    def to_representation(self, instance: User):
-        # self - это обекты от ProfileSerializer
-        # instance - это обекты от User. Его получим после того как нам передадут аргумент
-        rep = super().to_representation(instance)
-        # собирает словарь из fields = ('email', 'phone', 'bio')
-        return rep
+        fields = ('email', 'first_name', 'last_name')
+        read_only_fields = ('email',)
 
 
 class LogoutSerializer(serializers.Serializer):

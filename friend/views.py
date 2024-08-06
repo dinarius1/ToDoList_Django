@@ -1,113 +1,125 @@
+from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
+from .models import FriendUser, FriendRequest, FriendList
+from .serializers import FriendRequestSerializer, RespondFriendRequestSerializer, FriendUserSerializer, FriendListSerializer, FollowedListSerializer
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics, status
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
-from .models import FriendRequest #FriendList
-from .serializers import FriendRequestSerializer, RespondFriendRequestSerializer #FriendSerializer
 from drf_yasg.utils import swagger_auto_schema
-from django.contrib.auth import get_user_model
+
+"""
+Проверила, все гуд
+Создаем и видим список запросов тасков отправителя
+"""
 
 User = get_user_model()
 
 
-class SendFriendRequestView(generics.CreateAPIView):
-    permission_classes = [IsAuthenticated]
+class RequestFriendListCreateView(generics.ListCreateAPIView):
+    queryset = FriendRequest.objects.all()
     serializer_class = FriendRequestSerializer
-
-    @swagger_auto_schema(request_body=FriendRequestSerializer)
-    def post(self, request):
-        serializer = FriendRequestSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            receiver_email = serializer.validated_data['receiver']
-            try:
-                receiver_user = User.objects.get(email=receiver_email)
-            except User.DoesNotExist:
-                return Response({"detail": "Receiver user does not exist."}, status=status.HTTP_400_BAD_REQUEST)
-
-            # Проверка на существование запроса от этого отправителя к этому получателю
-            if FriendRequest.objects.filter(sender=request.user, receiver=receiver_user).exists():
-                return Response({"detail": "Friend request already exists."}, status=status.HTTP_200_OK)
-
-            # Создаем запрос на дружбу
-            FriendRequest.objects.create(sender=request.user, receiver=receiver_user, is_active=True)
-
-            return Response({"detail": "Friend request sent."}, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-class RespondFriendRequestView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        print(f'{self.request.user}')
+        # Возвращает список запросов на основе текущего пользователя
+        return FriendRequest.objects.filter(sender=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        # Получение сериализатора с данными запроса
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Если данные валидны, вызываем метод create
+        return super().create(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        # Сохранение объекта с текущим пользователем в качестве отправителя
+        serializer.save(sender=self.request.user)
+
+"""
+Проверила, все гуд
+Обноваление, удаление, чтение детальное 1 запроса таска отправителя
+"""
+
+
+class RequestFriendRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = FriendRequest.objects.all()
+    serializer_class = FriendRequestSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        print(f'{self.request.user}')
+        # Возвращает список запросов на основе текущего пользователя
+        return FriendRequest.objects.filter(sender=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        # Получение сериализатора с данными запроса
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Если данные валидны, вызываем метод create
+        return super().create(request, *args, **kwargs)
+
+    def perform_update(self, serializer):
+        # Сохранение объекта с текущим пользователем в качестве отправителя
+        serializer.save(sender=self.request.user)
+
+
+class RespondFriendRequestView(APIView):
     @swagger_auto_schema(request_body=RespondFriendRequestSerializer())
-    def post(self, request, request_id):
-        serializer = RespondFriendRequestSerializer(data=request.data)
-        print(vars(serializer))
-        friend_request = FriendRequest.objects.get(id=request_id)
-        print(vars(friend_request))
+    def post(self, request, pk):
+        friend_request = get_object_or_404(FriendRequest, id=pk)
+        serializer = RespondFriendRequestSerializer(data=request.data, context={'request': request, 'friend_request': friend_request})
 
         if serializer.is_valid():
-            if friend_request.is_active == False:
-                return Response({"detail": "Запрос уже недействителен."}, status=status.HTTP_403_FORBIDDEN)
+            action = serializer.validated_data['action']
+            right_to_read = friend_request.right_to_read
+            right_to_update = friend_request.right_to_update
 
-            try:
-                pass
-            except FriendRequest.DoesNotExist:
-                return Response({"detail": "Friend request not found."}, status=status.HTTP_404_NOT_FOUND)
-
+            # Обработка действия
             if action == 'accept':
-                if friend_request.sender == request.user:
-                    return Response({"detail": "You cannot accept this friend request."}, status=status.HTTP_403_FORBIDDEN)
+                sender = User.objects.get(id=friend_request.sender_id)
+                receiver = request.user
 
-                # Получаем объекты пользователей
-                sender_id = friend_request.sender_id
+                sender_to_receiver, created = FriendUser.objects.get_or_create(
+                    friend=receiver,
+                    user=sender,
+                    task_id=friend_request.task_id,
+                    right_to_read=right_to_read,
+                    right_to_update=right_to_update
+                )
 
-                receiver_email = request.user
-                # print(f'{sender_id} sender_id')
-                # print(f'{request.user} request.user')
-                sender = User.objects.get(id=sender_id)
-
-                receiver = User.objects.get(email=receiver_email)
-
-                print(f'{sender} sender')
-                print(f'{receiver} receiver')
-
-
-                # Получаем или создаем список друзей для получателя
-                # receiver_friend_list, created = FriendList.objects.get_or_create(user=receiver)
-                # # Добавляем отправителя в список друзей получателя
-                # receiver_friend_list.friends.add(sender)
-                #
-                #
-                # # Получаем или создаем список друзей для отправителя
-                # sender_friend_list, created = FriendList.objects.get_or_create(user=sender)
-                # # Добавляем получателя в список друзей отправителя
-                # sender_friend_list.friends.add(receiver)
-
+                sender_friend_list, created = FriendList.objects.get_or_create(user=sender)
+                sender_friend_list.friends.add(sender_to_receiver)
 
                 # Помечаем запрос как неактивный
                 friend_request.is_active = False
-                print(4)
                 friend_request.save()
 
-                return Response({"detail": "Friend request accepted."}, status=status.HTTP_200_OK)
+                return Response({"detail": "Запрос на дружбу принят."}, status=status.HTTP_200_OK)
 
             elif action == 'decline':
                 # Помечаем запрос как неактивный
                 friend_request.is_active = False
                 friend_request.save()
 
-                return Response({"detail": "Friend request declined."}, status=status.HTTP_200_OK)
+                return Response({"detail": "Запрос на дружбу отклонен и был удален."}, status=status.HTTP_204_OK)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class ListFriendRequestsView(generics.ListAPIView):
+
+class ReceivedFriendRequestsListView(generics.ListAPIView):
     serializer_class = FriendRequestSerializer
-    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return FriendRequest.objects.filter(receiver=self.request.user.email,)
 
 class RetrieveFriendRequestView(generics.RetrieveAPIView):
     serializer_class = FriendRequestSerializer
-    permission_classes = [IsAuthenticated]
 
     def get_object(self):
         request_id = self.kwargs.get('request_id')
@@ -117,9 +129,27 @@ class RetrieveFriendRequestView(generics.RetrieveAPIView):
         except FriendRequest.DoesNotExist:
             return Response({"detail": "Friend request not found."}, status=status.HTTP_404_NOT_FOUND)
 
-# class ListFriendsView(generics.ListAPIView):
-#     serializer_class = FriendSerializer
-#     permission_classes = [IsAuthenticated]
-#
-#     def get_queryset(self):
-#         return FriendList.objects.filter(user=self.request.user)
+
+class FriendListView(generics.ListAPIView):
+    serializer_class = FriendListSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return FriendList.objects.filter(user=self.request.user)
+
+
+class FriendUserRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = FriendUserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return FriendUser.objects.filter(user=self.request.user)
+
+
+class FollowedTaskListView(generics.ListAPIView):
+    serializer_class = FollowedListSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        return User.objects.filter(friend_user__friend=user).distinct()
