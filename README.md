@@ -31,17 +31,17 @@ create database todolist;
 ```
 6. Создать .env и прописать следующие пункты ниже.
 ```py
-SECRET_KEY
+SECRET_KEY=
 DEBUG=1
 ALLOWED_HOST=127.0.0.1
 
 DB_HOST =127.0.0.1
 DB_NAME=todolist
-DB_USER
-DB_PASSWORD
+DB_USER=
+DB_PASSWORD=
 
-EMAIL_HOST_USER
-EMAIL_HOST_PASSWORD
+EMAIL_HOST_USER=
+EMAIL_HOST_PASSWORD=
 
 SITE_ID=1
 LINK=http://127.0.0.1:8000/
